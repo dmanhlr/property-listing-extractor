@@ -116,6 +116,10 @@ def test_collect_paginates_to_discovered_max():
     assert len(result.listings) == 4
     assert result.blocked_urls == []
     assert not result.stopped_early
+    # relative canonical hrefs are absolutised against the search page origin
+    assert result.listings[0].listing_url.startswith(
+        "https://www.example-portal.example/property-house-vic-x-"
+    )
 
 
 def test_collect_stops_after_consecutive_blocks():

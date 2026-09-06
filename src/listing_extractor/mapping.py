@@ -156,12 +156,16 @@ def _land_size(raw: dict) -> str:
     return str(disp or raw.get("landSize") or "")
 
 
-def _canonical_url(raw: dict) -> str:
+def _canonical_url(raw: dict, base_url: str | None = None) -> str:
     href = _g(raw, "_links", "canonical", "href") or _g(raw, "_links", "canonical")
     if isinstance(href, str) and href and "{" not in href:
         if href.startswith("http"):
             return href
-        return f"https://www.example-portal.example{href}"
+        if base_url:
+            return base_url.rstrip("/") + href
+        # No origin context (offline demo, parity run): keep the path as given
+        # rather than inventing a host. The real routes pass base_url.
+        return href
     # Do not guess from an id: live data (2026-08-30) showed those fallback
     # links are dead. Empty -> validation drops the row.
     return ""
@@ -177,8 +181,14 @@ def _price_text(raw: dict) -> str:
     )
 
 
-def map_listing(raw: dict) -> Listing:
-    """Map one raw listing dict to a ``Listing``."""
+def map_listing(raw: dict, *, base_url: str | None = None) -> Listing:
+    """Map one raw listing dict to a ``Listing``.
+
+    ``base_url`` (e.g. ``"https://www.portal.example"``) absolutises a relative
+    canonical href. The extension passes the tab's own origin; the Playwright
+    route passes the search page's origin; the offline demo passes nothing and
+    keeps the path relative.
+    """
     price_text = _price_text(raw)
     price_value = _g(raw, "price", "value")
     if isinstance(price_value, bool) or not isinstance(price_value, int | float):
@@ -193,7 +203,7 @@ def map_listing(raw: dict) -> Listing:
     )
 
     return Listing(
-        listing_url=_canonical_url(raw),
+        listing_url=_canonical_url(raw, base_url),
         address_full=(
             _g(raw, "address", "display", "fullAddress")
             or _g(raw, "address", "display", "shortAddress")

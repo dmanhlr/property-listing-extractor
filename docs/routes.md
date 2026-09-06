@@ -9,7 +9,7 @@ differ only in how the HTML is obtained.
 |---|---|---|
 | How pages load | a person browses normally | a headless browser navigates |
 | Anti-bot | not triggered — a real browser driven by a person | triggered — needs an **AU residential proxy**; still stops itself after repeated blocks |
-| Setup | load unpacked in Chrome, edit one match pattern | `pip install -e ".[playwright]"`, `playwright install chromium`, set `PROXY_URL` |
+| Setup | load unpacked in Chrome, click "Grant access to this site" | `pip install -e ".[playwright]"`, `playwright install chromium`, set `PROXY_URL` |
 | Cost | none | proxy cost (per GB or per IP) |
 | Speed | one person, a few pages per minute | as fast as the proxy and delays allow |
 | Good for | a suburb list a person can page through in a sitting | more volume than that |

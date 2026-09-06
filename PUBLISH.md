@@ -19,46 +19,51 @@ Topics (set after creating):
 gh repo edit --add-topic chrome-extension,manifest-v3,playwright,web-scraping,csv-export,python,real-estate,data-extraction
 ```
 
-## 2. `<<FILL>>` items
+## 2. Node (for the parity test)
 
-| Where | What | How |
-|---|---|---|
-| `README.md`, "Re-verification of this build against the live site" | rows / unique / agency-cards / dead-links from one live extension run | do step 3 below, paste the four numbers, delete the `<<FILL>>` line |
-| `extension/manifest.json` | real portal origin | replace `https://www.example-portal.example/*` in `host_permissions`, `content_scripts[0].matches`, and `web_accessible_resources[0].matches` (3 spots) with the real origin; reload the extension. Keep this change local — do not commit the brand name. |
-| `src/listing_extractor/mapping.py` and `extension/parser.js` | `BASE_URL` / `https://www.example-portal.example` used to absolutise relative canonical links | if the live blob uses relative hrefs, set both to the real origin locally before a live run; keep the change out of commits |
+`tests/test_parity.py` runs the Python parser and `node extension/parser.js`
+over every fixture and compares the rows. **CI runs it regardless** — the
+workflow installs Node 20. To run it locally, install Node (≥ 18) from
+<https://nodejs.org/>; without `node` on PATH the test skips with a clear
+message instead of passing silently.
 
 ## 3. Manual step — re-verify the parser against the live site (required)
 
-The parser was rewritten in this build. Confirm it still matches the
-predecessor's live result before treating any live number as delivered.
+The parser was rewritten in this build. It is verified against the structural
+fixtures and by the parity test, but not yet against the live portal. Do one
+manual collection before treating any live number as delivered.
 
-1. `pip install -e ".[dev]"` and install Node (`node --version` ≥ 18) so the
-   parity test runs locally too.
-2. Edit `extension/manifest.json` match patterns to the real portal origin
-   (see the table above). Load `extension/` unpacked in Chrome
-   (`extension/README.md`).
-3. Browse the same suburb search used on 2026-08-30 (or the client's list).
+1. `pip install -e ".[dev]"`; install Node so the parity test runs locally too.
+2. Load `extension/` unpacked in Chrome (`extension/README.md`). No file edits
+   are needed — the extension asks for site access at runtime.
+3. Open the portal, open the popup, click **Grant access to this site**.
+4. Browse the same suburb search used on 2026-08-30 (or the client's list).
    Click **Scan this page** on each results page. Do not automate.
-4. **Export CSV.** Record: total rows, unique `listing_url`, agency cards (should
-   be 0), dead links (should be 0).
-5. Paste those into `README.md` and remove the `<<FILL>>` line. If they do not
-   match 26 / 26 / 0 / 0 within the expected drift, open an issue before
-   publishing.
+5. **Export CSV.** Record four numbers: total rows, unique `listing_url`,
+   agency cards (expect 0), dead links (expect 0).
+6. Paste them into `README.md`, in the `## Results` section, as a new line
+   immediately after the "The rewritten parser is verified…" paragraph, e.g.:
+
+   ```
+   **Live re-verification (extension, manual browsing, <date>):** <rows> rows,
+   <unique> unique URLs, <n> agency cards, <n> dead links.
+   ```
+
+   If they do not match the predecessor's 26 / 26 / 0 / 0 within expected drift,
+   open an issue before publishing.
 
 ## 4. Other manual steps
 
-- **Node in CI:** `.github/workflows/ci.yml` already installs Node 20 so
-  `tests/test_parity.py` executes on the runner. No action unless you change the
-  workflow.
-- **Playwright route, live:** needs an Australian residential proxy in
-  `PROXY_URL` (see `.env.example`). Untested end to end — treat a first live run
-  as exploratory. `listing-extract --suburb "..." --dry-run` first.
+- **Playwright route, live:** set an Australian residential proxy in `PROXY_URL`
+  (see `.env.example`) and the base URL that route navigates. Untested end to
+  end — treat a first live run as exploratory. Run
+  `listing-extract --suburb "..." --dry-run` first to see the URLs.
 - **Demo GIF (optional):** `docs/RECORD_GIF.md`. Save as `docs/demo.gif`, add it
   under the hero image in `README.md`.
 - **License holder:** `LICENSE` says "Manh" — change if you want your full name.
-- **Screenshots:** `docs/extension_panel.png` and `docs/extension_popup.png` were
-  produced this build against local fixtures. Re-take only if the panel/popup
-  UI changes (`python scripts/serve_fixtures.py`, then screenshot).
+- **Screenshots:** `docs/extension_panel.png` and `docs/extension_popup.png`
+  were produced this build against local fixtures. Re-take only if the
+  panel/popup UI changes (`python scripts/serve_fixtures.py`, then screenshot).
 
 ## 5. Before pushing
 
@@ -67,5 +72,5 @@ pip install -e ".[dev]"
 ruff format --check .
 ruff check .
 python scripts/check_no_pii.py
-pytest                 # 51 tests; parity runs with Node, skips loudly without
+pytest                 # 54 with Node; 50 pass + 4 skip without (parity)
 ```

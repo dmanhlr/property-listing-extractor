@@ -15,7 +15,7 @@ client who imports one CSV by hand, no automation and no sync.
 | Synthetic search pages parsed | 2 pages, 28 listing rows seen |
 | Valid after validation | 26 rows, 26 unique `listing_url`, 0 agency cards |
 | Dropped (with reason) | 2 — 1 missing `listing_url`, 1 duplicate |
-| Test suite | 51 tests (`pytest`), `ruff` clean, `check_no_pii` clean |
+| Test suite | 54 tests with Node (`pytest`); 50 pass + 4 skip without it (the parity cases). `ruff` clean, `check_no_pii` clean |
 
 The 28 → 26 numbers come from `listing-extract --demo`. Denominator: the two
 synthetic search fixtures in `tests/fixtures/pages/`.
@@ -28,10 +28,11 @@ synthetic search fixtures in `tests/fixtures/pages/`.
 - After the fixes (carried into this build's parser and tests): **26 rows, 26
   unique URLs, 0 agency cards, 0 dead links.**
 
-**Re-verification of this build against the live site:** not yet run.
-`<<FILL: rows / unique / agency-cards / dead-links from one live extension
-collection on the real portal — see PUBLISH.md>>` — expected to match the
-predecessor's 26 / 26 / 0 / 0.
+The rewritten parser is verified against the structural fixtures and by the
+Python/JS parity test; it has **not** yet been re-run against the live portal,
+and the 2026-08-30 figures above come from the predecessor prototype, not from
+this codebase. A one-off live re-verification is the remaining step before
+publishing — see [`PUBLISH.md`](PUBLISH.md).
 
 **Playwright route:** never completed end to end — a non-AU IP gets 429 on the
 first request. In this build it is exercised only by a mocked unit test and
@@ -57,7 +58,9 @@ One parser, two runtimes:
 2. Walk the object recursively, parsing any string that looks like JSON.
 3. Keep every dict that looks like a listing — **requires `address.suburb`**, so
    agency cards do not qualify. Key paths are never hard-coded; they change.
-4. Map each to 17 fields. A field the source does not expose stays empty.
+4. Map each to 17 fields. A field the source does not expose stays empty. A
+   relative canonical link is absolutised against the page/tab origin at
+   runtime (the offline demo leaves it relative).
 5. Validate: `listing_url, suburb, state, postcode, price_text, property_type`
    must all be present; dedupe by `listing_url`; every drop is logged with a
    reason.
@@ -84,9 +87,14 @@ skips.
 ## Two routes
 
 - **Extension route** — a person browses; the extension reads the page's own
-  embedded JSON and exports CSV / XLSX. This is the delivery route.
+  embedded JSON and exports CSV / XLSX. This is the delivery route. It ships
+  with **no site access**: you click "Grant access to this site" in the popup,
+  which asks Chrome for permission to the origin you are on
+  (`chrome.permissions.request`), and only then registers its scripts for that
+  site. Nothing — no portal name, no origin — is hardcoded in `manifest.json`.
 - **Playwright route** — a headless browser pages through search results; needs
-  an Australian residential proxy and stops itself after repeated blocks.
+  an Australian residential proxy and stops itself after repeated blocks. It
+  navigates a base URL you set for that route.
 
 Which to use, and what each cannot do: [`docs/routes.md`](docs/routes.md).
 Loading the extension: [`extension/README.md`](extension/README.md).
@@ -102,9 +110,10 @@ Loading the extension: [`extension/README.md`](extension/README.md).
   the live site.
 - `scripts/check_no_pii.py` scans tracked text files for email / phone / street-
   address patterns and runs in CI.
-- The portal's brand name is kept out of the repo — the package, the extension
-  name and `manifest.json` all use placeholders you edit locally before a real
-  run.
+- The portal's brand name is kept out of the repo. The extension has no
+  hardcoded origin — it asks for access to whatever site you are on, when you
+  ask it to — and the offline demo keeps canonical links relative rather than
+  inventing a host.
 
 ## Limitations
 

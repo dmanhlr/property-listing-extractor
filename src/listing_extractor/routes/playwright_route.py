@@ -58,6 +58,13 @@ def slugify_suburb(raw: str) -> str:
     return quote("+".join(p.lower() for p in parts), safe="+")
 
 
+def _origin(url: str) -> str:
+    from urllib.parse import urlparse
+
+    p = urlparse(url)
+    return f"{p.scheme}://{p.netloc}" if p.scheme and p.netloc else ""
+
+
 def build_search_url(channel: str, suburb: str, page: int) -> str:
     channel = channel.lower().strip()
     if channel not in CHANNELS:
@@ -169,7 +176,10 @@ def collect(
             if discovered_max:
                 hard_cap = min(hard_cap, discovered_max)
                 log.info("max page available: %s (cap %s)", discovered_max, hard_cap)
-        page_listings = [map_listing(raw) for raw in iter_listings(blob)]
+        origin = _origin(url)
+        page_listings = [
+            map_listing(raw, base_url=origin) for raw in iter_listings(blob)
+        ]
         log.info("page %s: %s listings", page, len(page_listings))
         result.listings.extend(page_listings)
         page += 1

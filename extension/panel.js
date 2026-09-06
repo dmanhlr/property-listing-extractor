@@ -7,6 +7,10 @@
 (function (global) {
   "use strict";
 
+  // May be injected twice (registered content script + popup inject-now). Keep
+  // the first instance so its handlers stay bound to the DOM buttons.
+  if (global.PlePanel) return;
+
   var els = null;
   var handlers = { scan: null, exportCsv: null, exportXlsx: null, clear: null };
 

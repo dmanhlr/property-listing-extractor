@@ -120,6 +120,35 @@ def test_regression_2_rejects_templated_canonical():
     assert map_listing(raw).listing_url == ""
 
 
+# --- canonical link: relative kept offline, absolutised with a base ----------
+
+
+def _rel_canonical_raw() -> dict:
+    return {
+        "id": "9",
+        "_links": {"canonical": {"href": "/property-house-vic-x-9"}},
+        "address": {"suburb": "X", "state": "vic", "postcode": "3000"},
+        "propertyType": {"display": "House"},
+        "price": {"display": "$1", "value": 1},
+    }
+
+
+def test_relative_canonical_kept_when_no_base_url():
+    assert map_listing(_rel_canonical_raw()).listing_url == "/property-house-vic-x-9"
+
+
+def test_relative_canonical_absolutised_against_base_url():
+    row = map_listing(_rel_canonical_raw(), base_url="https://portal.example/")
+    assert row.listing_url == "https://portal.example/property-house-vic-x-9"
+
+
+def test_absolute_canonical_left_untouched_even_with_base_url():
+    raw = _rel_canonical_raw()
+    raw["_links"]["canonical"]["href"] = "https://other.example/listing/9"
+    row = map_listing(raw, base_url="https://portal.example")
+    assert row.listing_url == "https://other.example/listing/9"
+
+
 # --- regression 3: project listing --------------------------------------
 
 

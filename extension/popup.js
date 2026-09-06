@@ -1,7 +1,11 @@
 /*
- * popup.js -- the toolbar popup. It runs the same parser.js in the active tab
- * via chrome.scripting.executeScript, then merges the rows into the same store
- * the in-page panel uses. Exports go through the background worker.
+ * popup.js -- the toolbar popup.
+ *
+ * Access is per-site and granted at runtime: until the person clicks "Grant
+ * access to this site" (which calls chrome.permissions.request for the current
+ * tab's origin), scanning is disabled. Once granted, the popup asks the
+ * background worker to register the content scripts for that origin and inject
+ * them into the open tab, then runs the same parser.js the panel uses.
  */
 (function () {
   "use strict";
@@ -12,6 +16,8 @@
     "car_spaces", "land_size", "description", "agent_name", "agency_name",
     "listing_date", "image_urls",
   ];
+
+  var state = { pattern: null, origin: null, granted: false, injectable: false };
 
   var $ = function (id) {
     return document.getElementById(id);
@@ -25,6 +31,7 @@
     ["scan", "csv", "xlsx", "clear"].forEach(function (id) {
       $(id).disabled = busy;
     });
+    applyGateState();
   }
 
   function stamp() {
@@ -43,14 +50,103 @@
     return tabs[0];
   }
 
+  function applyGateState() {
+    // Scanning needs an explicit grant for this origin.
+    if (!state.granted) $("scan").disabled = true;
+  }
+
+  function renderAccess() {
+    var el = $("access");
+    if (!state.injectable) {
+      el.className = "access blocked";
+      el.textContent =
+        "This page can't be scanned (not an http/https site).";
+      $("scan").disabled = true;
+      return;
+    }
+    if (state.granted) {
+      el.className = "access granted";
+      el.innerHTML =
+        "Access granted for <b>" +
+        escapeHtml(state.origin) +
+        "</b>. <span class='link' id='revoke'>Remove access</span>";
+      $("revoke").addEventListener("click", onRevoke);
+    } else {
+      el.className = "access blocked";
+      el.innerHTML =
+        "No access to <b>" +
+        escapeHtml(state.origin) +
+        "</b>. Grant it to scan this site.";
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.textContent = "Grant access to this site";
+      btn.addEventListener("click", onGrant);
+      el.appendChild(btn);
+    }
+    applyGateState();
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+
+  async function refreshAccess() {
+    var tab = await activeTab();
+    state.tabId = tab && tab.id;
+    state.pattern = tab ? window.Access.originPatternForUrl(tab.url || "") : null;
+    state.injectable = !!state.pattern;
+    state.origin = state.pattern ? state.pattern.replace(/\/\*$/, "") : "(this page)";
+    state.granted = state.pattern
+      ? await window.Access.hasAccess(state.pattern)
+      : false;
+    renderAccess();
+    if (!state.granted && state.injectable) {
+      setStatus("Grant access to this site to scan.");
+    }
+  }
+
+  async function onGrant() {
+    try {
+      var ok = await window.Access.requestAccess(state.pattern);
+      if (!ok) {
+        setStatus("Access was not granted.");
+        return;
+      }
+      await chrome.runtime.sendMessage({
+        type: "PLE_ACCESS_GRANTED",
+        pattern: state.pattern,
+        tabId: state.tabId,
+      });
+      await refreshAccess();
+      setStatus("Access granted. Click “Scan this tab”.");
+    } catch (e) {
+      setStatus("Grant failed: " + e.message);
+    }
+  }
+
+  async function onRevoke() {
+    try {
+      await window.Access.removeAccess(state.pattern);
+      await refreshAccess();
+      setStatus("Access removed for this site.");
+    } catch (e) {
+      setStatus("Could not remove access: " + e.message);
+    }
+  }
+
   async function refreshStats(pageCount) {
-    var state = await window.Collector.load();
-    var c = window.Collector.counts(state);
+    var st = await window.Collector.load();
+    var c = window.Collector.counts(st);
     if (pageCount !== null && pageCount !== undefined)
       $("page").textContent = String(pageCount);
     $("unique").textContent = String(c.unique);
     $("dupes").textContent = String(c.duplicatesSkipped);
-    if (state.lastStatus) $("status").textContent = state.lastStatus;
+    var hasRows = c.unique > 0;
+    $("csv").disabled = !hasRows;
+    $("xlsx").disabled = !hasRows;
+    if (st.lastStatus && state.granted) $("status").textContent = st.lastStatus;
   }
 
   function csvCell(name, value) {
@@ -90,6 +186,10 @@
   }
 
   async function onScan() {
+    if (!state.granted) {
+      setStatus("Grant access to this site first.");
+      return;
+    }
     setBusy(true);
     try {
       var tab = await activeTab();
@@ -182,9 +282,13 @@
     }
   }
 
-  document.getElementById("scan").addEventListener("click", onScan);
-  document.getElementById("csv").addEventListener("click", onExportCsv);
-  document.getElementById("xlsx").addEventListener("click", onExportXlsx);
-  document.getElementById("clear").addEventListener("click", onClear);
-  refreshStats(null);
+  $("scan").addEventListener("click", onScan);
+  $("csv").addEventListener("click", onExportCsv);
+  $("xlsx").addEventListener("click", onExportXlsx);
+  $("clear").addEventListener("click", onClear);
+
+  (async function init() {
+    await refreshAccess();
+    await refreshStats(null);
+  })();
 })();

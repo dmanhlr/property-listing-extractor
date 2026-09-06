@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <style>
       body {
-        width: 260px;
+        width: 270px;
         margin: 0;
         padding: 12px;
         font: 13px -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
@@ -13,6 +13,39 @@
       h1 {
         font-size: 13px;
         margin: 0 0 8px;
+      }
+      .access {
+        font-size: 11.5px;
+        border-radius: 6px;
+        padding: 7px 8px;
+        margin-bottom: 10px;
+        line-height: 1.4;
+      }
+      .access.granted {
+        background: #f0fdf4;
+        color: #166534;
+      }
+      .access.blocked {
+        background: #fef2f2;
+        color: #b91c1c;
+      }
+      .access button {
+        margin-top: 6px;
+        width: 100%;
+        padding: 6px 8px;
+        border-radius: 6px;
+        border: 1px solid #15803d;
+        background: #15803d;
+        color: #fff;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .access .link {
+        display: inline-block;
+        margin-top: 4px;
+        color: #166534;
+        text-decoration: underline;
+        cursor: pointer;
       }
       .stats {
         display: grid;
@@ -68,6 +101,7 @@
   </head>
   <body>
     <h1>Property Listing Collector</h1>
+    <div id="access" class="access blocked" role="status" aria-live="polite"></div>
     <div class="stats">
       <span>On this tab</span><span class="num" id="page">0</span>
       <span>Collected (unique)</span><span class="num" id="unique">0</span>
@@ -81,8 +115,10 @@
       <button type="button" id="clear">Clear</button>
     </div>
     <div class="foot">
-      Reads the page’s own embedded JSON. Same parser as the in-page panel.
+      The extension asks for access to the site you are on, when you ask it to.
+      Nothing is hardcoded. Same parser as the in-page panel.
     </div>
+    <script src="access.js"></script>
     <script src="storage.js"></script>
     <script src="popup.js"></script>
   </body>

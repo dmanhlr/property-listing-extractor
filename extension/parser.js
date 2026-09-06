@@ -57,7 +57,6 @@
     "image_urls",
   ];
 
-  var BASE_URL = "https://www.example-portal.example";
   var IMAGE_SIZE = "1144x858-format=webp";
   var TEMPLATE_TOKEN = /\{[^}]+\}/g;
   var PRICE_TOKEN = /\$\s?(\d{1,3}(?:[,\s]?\d{3})*(?:\.\d+)?)\s*([mMkK])?/g;
@@ -309,11 +308,14 @@
     return String(disp || raw.landSize || "");
   }
 
-  function canonicalUrl(raw) {
+  function canonicalUrl(raw, baseUrl) {
     var href =
       get(raw, ["_links", "canonical", "href"]) || get(raw, ["_links", "canonical"]);
     if (typeof href === "string" && href && href.indexOf("{") === -1) {
-      return href.indexOf("http") === 0 ? href : BASE_URL + href;
+      if (href.indexOf("http") === 0) return href;
+      // Absolutise against the origin the page was loaded from; with no origin
+      // context (Node parity run) keep the path relative.
+      return baseUrl ? baseUrl.replace(/\/+$/, "") + href : href;
     }
     return "";
   }
@@ -328,7 +330,7 @@
     );
   }
 
-  function mapListing(raw) {
+  function mapListing(raw, baseUrl) {
     var pText = priceText(raw);
     var pVal = get(raw, ["price", "value"]);
     if (typeof pVal === "boolean" || typeof pVal !== "number") pVal = null;
@@ -341,7 +343,7 @@
       "";
 
     return {
-      listing_url: canonicalUrl(raw),
+      listing_url: canonicalUrl(raw, baseUrl),
       address_full:
         get(raw, ["address", "display", "fullAddress"]) ||
         get(raw, ["address", "display", "shortAddress"]) ||
@@ -379,13 +381,15 @@
     return iterListings(extractBlob(html), new Set(), []);
   }
 
-  function parseListingsFromText(text) {
+  function parseListingsFromText(text, baseUrl) {
     var blob = extractBlob(text);
-    return iterListings(blob, new Set(), []).map(mapListing);
+    return iterListings(blob, new Set(), []).map(function (raw) {
+      return mapListing(raw, baseUrl);
+    });
   }
 
-  function parseListingsFromHtml(html) {
-    return parseListingsFromText(html);
+  function parseListingsFromHtml(html, baseUrl) {
+    return parseListingsFromText(html, baseUrl);
   }
 
   // Browser-only: read the script tag on the current page (never the wiped
@@ -402,7 +406,10 @@
     }
     var blob = extractBlob(script.textContent);
     var hadBlob = blob && Object.keys(blob).length > 0;
-    var rows = iterListings(blob, new Set(), []).map(mapListing);
+    var baseUrl = typeof location !== "undefined" ? location.origin : undefined;
+    var rows = iterListings(blob, new Set(), []).map(function (raw) {
+      return mapListing(raw, baseUrl);
+    });
     return {
       hadScript: true,
       hadBlob: !!hadBlob,

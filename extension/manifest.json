@@ -4,33 +4,10 @@
   "version": "0.1.0",
   "description": "Reads the page's own embedded JSON while a person browses, and exports the listings to CSV / XLSX.",
   "permissions": ["storage", "scripting", "downloads", "activeTab"],
-  "host_permissions": [
-    "http://localhost/*",
-    "http://127.0.0.1/*",
-    "https://www.example-portal.example/*"
-  ],
+  "optional_host_permissions": ["https://*/*", "http://*/*"],
   "background": { "service_worker": "background.js" },
-  "action": { "default_popup": "popup.html", "default_title": "Property Listing Collector" },
-  "content_scripts": [
-    {
-      "matches": [
-        "http://localhost/*",
-        "http://127.0.0.1/*",
-        "https://www.example-portal.example/*"
-      ],
-      "js": ["parser.js", "storage.js", "panel.js", "content.js"],
-      "css": ["panel.css"],
-      "run_at": "document_idle"
-    }
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": ["parser.js"],
-      "matches": [
-        "http://localhost/*",
-        "http://127.0.0.1/*",
-        "https://www.example-portal.example/*"
-      ]
-    }
-  ]
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Property Listing Collector"
+  }
 }

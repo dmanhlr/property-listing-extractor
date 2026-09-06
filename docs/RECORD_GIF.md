@@ -12,8 +12,9 @@ python scripts/generate_fixtures.py        # if not already generated
 python scripts/serve_fixtures.py --port 8000
 ```
 
-Load `extension/` unpacked in Chrome (see `extension/README.md`). Leave the match
-patterns on `localhost` for this recording.
+Load `extension/` unpacked in Chrome (see `extension/README.md`). Open the first
+fixture page, then in the popup click **Grant access to this site** and accept
+the prompt for `http://127.0.0.1` — the panel appears once access is granted.
 
 ## What to record (~15 s)
 

@@ -6,6 +6,11 @@
 (function () {
   "use strict";
 
+  // May be injected twice: once by the registered content script on navigation,
+  // once by the popup's inject-now after an access grant. Run once.
+  if (window.__pleContentLoaded) return;
+  window.__pleContentLoaded = true;
+
   var FIELDNAMES = window.ListingParser.FIELDNAMES;
 
   function csvCell(name, value) {

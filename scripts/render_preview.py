@@ -65,7 +65,9 @@ def _cell(listing, key: str) -> str:
     if value is None or value == "":
         return "<span class='empty'>—</span>"
     if key == "listing_url":
-        return html.escape(value.replace("https://www.example-portal.example", "…"))
+        # The offline demo keeps canonical links relative (no origin context);
+        # the real routes absolutise them against the tab / page origin.
+        return html.escape("…" + value if value.startswith("/") else value)
     if key == "price_value":
         return f"{int(value):,}"
     return html.escape(str(value))
