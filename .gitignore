@@ -1,0 +1,24 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+
+# Env / secrets
+.env
+
+# Build output
+/output/
+
+# Playwright browsers (installed per-machine)
+# (browsers live outside the repo; nothing to ignore here, kept as a note)
+
+# OS
+.DS_Store
+Thumbs.db

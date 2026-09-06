@@ -1,0 +1,5 @@
+# Normalise line endings: LF in the repo, checked out native on each platform.
+* text=auto eol=lf
+
+# Third-party bundle: don't diff or normalise.
+extension/vendor/xlsx.full.min.js linguist-vendored -text
