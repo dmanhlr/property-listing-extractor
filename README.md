@@ -15,7 +15,7 @@ client who imports one CSV by hand, no automation and no sync.
 | Synthetic search pages parsed | 2 pages, 28 listing rows seen |
 | Valid after validation | 26 rows, 26 unique `listing_url`, 0 agency cards |
 | Dropped (with reason) | 2 — 1 missing `listing_url`, 1 duplicate |
-| Test suite | 54 tests with Node (`pytest`); 50 pass + 4 skip without it (the parity cases). `ruff` clean, `check_no_pii` clean |
+| Test suite | 55 tests with Node (`pytest`); 51 pass + 4 skip without it (the parity cases). `ruff` clean, `check_no_pii` clean |
 
 The 28 → 26 numbers come from `listing-extract --demo`. Denominator: the two
 synthetic search fixtures in `tests/fixtures/pages/`.
@@ -23,16 +23,32 @@ synthetic search fixtures in `tests/fixtures/pages/`.
 **Predecessor prototype — live, manual browsing, 2026-08-30 (quoted as such):**
 
 - First pass returned **53 rows**, which exposed two bugs: agency office cards
-  counted as listings, and dead URLs fabricated for listings with no canonical
-  link.
-- After the fixes (carried into this build's parser and tests): **26 rows, 26
-  unique URLs, 0 agency cards, 0 dead links.**
+  counted as listings, and URLs fabricated from the listing id for listings with
+  no canonical link — every one of those dead on arrival.
+- After the fixes (carried into this build's parser and tests): **26 exported,
+  26 unique `listing_url`, 0 agency cards, 0 fabricated URLs.**
 
 The rewritten parser is verified against the structural fixtures and by the
-Python/JS parity test; it has **not** yet been re-run against the live portal,
-and the 2026-08-30 figures above come from the predecessor prototype, not from
-this codebase. A one-off live re-verification is the remaining step before
-publishing — see [`PUBLISH.md`](PUBLISH.md).
+Python/JS parity test. The 2026-08-30 figures above come from the predecessor
+prototype, not from this codebase.
+
+**Live re-verification (extension, manual browsing, 2026-09-08):**
+
+- **37 seen** — listing-shaped rows encountered while hand-paging the search
+  results.
+- **33 exported, 33 unique `listing_url`.** The extension store is keyed by
+  `listing_url`, so the export is de-duped by construction and these two counts
+  are always equal. The 37 → 33 gap is 4 rows that were seen again on a later
+  search page or carried no canonical link; neither kind reaches the export.
+- **0 agency cards. 0 fabricated or malformed URLs** — the parser only ever
+  emits a canonical link the page's own JSON carried (an absolute URL, or the
+  browsed origin joined to the path as given). Anything else leaves
+  `listing_url` empty and validation drops the row.
+- **4 exported URLs returned 404 when visited at check time** — well-formed
+  canonical links among the 33 whose listings were withdrawn between collection
+  and checking. This is a separate set from the 37 → 33 gap and is not an
+  extraction fault: listings come off the market continuously, so expect a few
+  on any live pass.
 
 **Playwright route:** never completed end to end — a non-AU IP gets 429 on the
 first request. In this build it is exercised only by a mocked unit test and

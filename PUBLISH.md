@@ -39,18 +39,25 @@ manual collection before treating any live number as delivered.
 3. Open the portal, open the popup, click **Grant access to this site**.
 4. Browse the same suburb search used on 2026-08-30 (or the client's list).
    Click **Scan this page** on each results page. Do not automate.
-5. **Export CSV.** Record four numbers: total rows, unique `listing_url`,
-   agency cards (expect 0), dead links (expect 0).
-6. Paste them into `README.md`, in the `## Results` section, as a new line
-   immediately after the "The rewritten parser is verified…" paragraph, e.g.:
+5. **Export CSV.** Record, keeping "seen" and "exported" apart:
+   - **seen** — the running "Scanned N" tally across all pages.
+   - **exported** — rows in the CSV. The store is keyed by `listing_url`, so
+     this equals the unique-URL count; `seen − exported` is duplicates plus
+     rows with no canonical link.
+   - **agency cards** in the export (expect 0).
+   - **fabricated / malformed URLs** (expect 0 — the parser only emits a
+     canonical link the page carried).
+   - **exported URLs that return 404 when visited** — expect a few. A listing
+     can be withdrawn between collection and checking; this is not a defect.
+     Keep it separate from the fabricated-URL count.
+6. Paste them into `README.md`, in the `## Results` section, replacing the
+   previous "Live re-verification" block. Label every number (seen / exported /
+   unique / agency cards / fabricated URLs / 404 at check time) — do not print a
+   bare "N rows, M unique URLs" line.
 
-   ```
-   **Live re-verification (extension, manual browsing, <date>):** <rows> rows,
-   <unique> unique URLs, <n> agency cards, <n> dead links.
-   ```
-
-   If they do not match the predecessor's 26 / 26 / 0 / 0 within expected drift,
-   open an issue before publishing.
+   If `exported`, agency cards, or fabricated URLs drift far from the
+   predecessor's 26 / 0 / 0, open an issue before publishing. A handful of 404s
+   is expected and does not block publishing.
 
 ## 4. Other manual steps
 
@@ -72,5 +79,5 @@ pip install -e ".[dev]"
 ruff format --check .
 ruff check .
 python scripts/check_no_pii.py
-pytest                 # 54 with Node; 50 pass + 4 skip without (parity)
+pytest                 # 55 with Node; 51 pass + 4 skip without (parity)
 ```

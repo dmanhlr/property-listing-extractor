@@ -120,6 +120,31 @@ def test_regression_2_rejects_templated_canonical():
     assert map_listing(raw).listing_url == ""
 
 
+def test_wellformed_canonical_is_passed_through_verbatim():
+    # A canonical link the page's own JSON carried is emitted unchanged. If such
+    # a link later 404s, that is a withdrawn listing, not a fabricated URL: the
+    # parser never invents or mangles an href. This keeps "0 fabricated URLs"
+    # (a parser guarantee) separate from "N URLs that 404 at check time"
+    # (a property of the live site at a point in time).
+    raw = {
+        "id": "150101076",
+        "_links": {
+            "canonical": {
+                "href": "https://portal.example/property-house-vic-riverbend-150101076"
+            }
+        },
+        "address": {"suburb": "Riverbend", "state": "vic", "postcode": "3999"},
+        "propertyType": {"display": "House"},
+        "price": {"display": "$1,000,000", "value": 1_000_000},
+    }
+    row = map_listing(raw, base_url="https://portal.example")
+    assert (
+        row.listing_url
+        == "https://portal.example/property-house-vic-riverbend-150101076"
+    )
+    assert "{" not in row.listing_url and "}" not in row.listing_url
+
+
 # --- canonical link: relative kept offline, absolutised with a base ----------
 
 
