@@ -5,6 +5,8 @@ client who imports one CSV by hand, no automation and no sync.
 
 ![Exported sheet preview](docs/output_preview.png)
 
+![Extension route demo: scan two fixture pages, then export CSV](docs/demo.gif)
+
 ## Results
 
 **This build — fixture-verified (synthetic pages, no live run):**

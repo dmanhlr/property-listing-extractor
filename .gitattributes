@@ -3,3 +3,7 @@
 
 # Third-party bundle: don't diff or normalise.
 extension/vendor/xlsx.full.min.js linguist-vendored -text
+
+# Binary assets: never normalise line endings.
+*.gif binary
+*.png binary
